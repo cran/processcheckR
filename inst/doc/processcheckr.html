@@ -12,34 +12,66 @@
 
 <meta name="author" content="Gert Janssenswillen" />
 
-<meta name="date" content="2020-06-26" />
+<meta name="date" content="2022-10-03" />
 
 <title>Rule-Based Conformance Checking</title>
 
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
 
 
-<style type="text/css">code{white-space: pre;}</style>
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
 <style type="text/css" data-origin="pandoc">
-a.sourceLine { display: inline-block; line-height: 1.25; }
-a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
-a.sourceLine:empty { height: 1.2em; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
-code.sourceCode { white-space: pre; position: relative; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
 div.sourceCode { margin: 1em 0; }
 pre.sourceCode { margin: 0; }
 @media screen {
 div.sourceCode { overflow: auto; }
 }
 @media print {
-code.sourceCode { white-space: pre-wrap; }
-a.sourceLine { text-indent: -1em; padding-left: 1em; }
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
-pre.numberSource a.sourceLine
-  { position: relative; left: -4em; }
-pre.numberSource a.sourceLine::before
-  { content: attr(title);
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
     position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; pointer-events: all; display: inline-block;
+    border: none; display: inline-block;
     -webkit-touch-callout: none; -webkit-user-select: none;
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
@@ -48,9 +80,9 @@ pre.numberSource a.sourceLine::before
   }
 pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
 div.sourceCode
-  {  }
+  {   }
 @media screen {
-a.sourceLine::before { text-decoration: underline; }
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 code span.al { color: #ff0000; font-weight: bold; } /* Alert */
 code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
@@ -90,13 +122,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   for (var i = 0; i < sheets.length; i++) {
     if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
     try { var rules = sheets[i].cssRules; } catch (e) { continue; }
-    for (var j = 0; j < rules.length; j++) {
+    var j = 0;
+    while (j < rules.length) {
       var rule = rules[j];
       // check if there is a div.sourceCode rule
-      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -104,6 +143,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   }
 })();
 </script>
+
 
 
 
@@ -301,71 +341,81 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <h1 class="title toc-ignore">Rule-Based Conformance Checking</h1>
 <h4 class="author">Gert Janssenswillen</h4>
-<h4 class="date">2020-06-26</h4>
+<h4 class="date">2022-10-03</h4>
 
 
 
-<p>The goal of processcheckR is to support rule-based conformance checking. Currently the following declarative rules can be checked:</p>
+<p>The goal of processcheckR is to support rule-based conformance
+checking. Currently the following declarative rules can be checked:</p>
 <p>Cardinality rules:</p>
 <ul>
 <li><code>contains</code>: activity occurs n times or more</li>
 <li><code>contains_exactly</code>: activity occurs exactly n times</li>
-<li><code>contains_between</code>: activity occures between min and max number of times</li>
-<li><code>absent</code>: activity does not occur more than n - 1 times</li>
+<li><code>contains_between</code>: activity occures between min and max
+number of times</li>
+<li><code>absent</code>: activity does not occur more than n - 1
+times</li>
 </ul>
 <p>Ordering rules:</p>
 <ul>
 <li><code>starts</code>: case starts with activity</li>
 <li><code>ends</code>: case ends with activity</li>
-<li><code>succession</code>: if activity A happens, B should happen after. If B happens, A should have happened before.</li>
-<li><code>response</code>: if activity A happens, B should happen after</li>
-<li><code>precedence</code>: if activity B happens, A should have happend before</li>
-<li><code>responded_existence</code>: if activity A happens, B should also (have) happen(ed) (i.e. before or after A)</li>
+<li><code>succession</code>: if activity A happens, B should happen
+after. If B happens, A should have happened before.</li>
+<li><code>response</code>: if activity A happens, B should happen
+after</li>
+<li><code>precedence</code>: if activity B happens, A should have
+happend before</li>
+<li><code>responded_existence</code>: if activity A happens, B should
+also (have) happen(ed) (i.e. before or after A)</li>
 </ul>
 <p>Exclusiveness:</p>
 <ul>
 <li><code>and</code>: two activities always exist together</li>
-<li><code>xor</code>: two activities are not allowed to exist together</li>
+<li><code>xor</code>: two activities are not allowed to exist
+together</li>
 </ul>
-<p>Rules can be checked using the <code>check_rule</code> function (see example below). It will create a new logical variable to indicate for which cases the rule holds. The name of the variable can be configured using the <code>label</code> argument in <code>check_rule</code>.</p>
+<p>Rules can be checked using the <code>check_rule</code> function (see
+example below). It will create a new logical variable to indicate for
+which cases the rule holds. The name of the variable can be configured
+using the <code>label</code> argument in <code>check_rule</code>.</p>
 <div id="installation" class="section level2">
 <h2>Installation</h2>
 <p>You can install processcheckR from github with:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="co"># install.packages(&quot;devtools&quot;)</span></a>
-<a class="sourceLine" id="cb1-2" title="2">devtools<span class="op">::</span><span class="kw">install_github</span>(<span class="st">&quot;gertjanssenswillen/processcheckR&quot;</span>)</a></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># install.packages(&quot;devtools&quot;)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">&quot;gertjanssenswillen/processcheckR&quot;</span>)</span></code></pre></div>
 </div>
 <div id="example" class="section level2">
 <h2>Example</h2>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1"><span class="kw">library</span>(bupaR)</a>
-<a class="sourceLine" id="cb2-2" title="2"><span class="co">#&gt; </span></a>
-<a class="sourceLine" id="cb2-3" title="3"><span class="co">#&gt; Attaching package: &#39;bupaR&#39;</span></a>
-<a class="sourceLine" id="cb2-4" title="4"><span class="co">#&gt; The following object is masked from &#39;package:stats&#39;:</span></a>
-<a class="sourceLine" id="cb2-5" title="5"><span class="co">#&gt; </span></a>
-<a class="sourceLine" id="cb2-6" title="6"><span class="co">#&gt;     filter</span></a>
-<a class="sourceLine" id="cb2-7" title="7"><span class="co">#&gt; The following object is masked from &#39;package:utils&#39;:</span></a>
-<a class="sourceLine" id="cb2-8" title="8"><span class="co">#&gt; </span></a>
-<a class="sourceLine" id="cb2-9" title="9"><span class="co">#&gt;     timestamp</span></a>
-<a class="sourceLine" id="cb2-10" title="10"><span class="kw">library</span>(processcheckR)</a>
-<a class="sourceLine" id="cb2-11" title="11"><span class="co">#&gt; </span></a>
-<a class="sourceLine" id="cb2-12" title="12"><span class="co">#&gt; Attaching package: &#39;processcheckR&#39;</span></a>
-<a class="sourceLine" id="cb2-13" title="13"><span class="co">#&gt; The following object is masked from &#39;package:base&#39;:</span></a>
-<a class="sourceLine" id="cb2-14" title="14"><span class="co">#&gt; </span></a>
-<a class="sourceLine" id="cb2-15" title="15"><span class="co">#&gt;     xor</span></a>
-<a class="sourceLine" id="cb2-16" title="16">sepsis <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb2-17" title="17"><span class="st">  </span><span class="co"># check if cases starts with &quot;ER Registration&quot;</span></a>
-<a class="sourceLine" id="cb2-18" title="18"><span class="st">  </span><span class="kw">check_rule</span>(<span class="kw">starts</span>(<span class="st">&quot;ER Registration&quot;</span>), <span class="dt">label =</span> <span class="st">&quot;r1&quot;</span>) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb2-19" title="19"><span class="st">  </span><span class="co"># check if activities &quot;CRP&quot; and &quot;LacticAcid&quot; occur together</span></a>
-<a class="sourceLine" id="cb2-20" title="20"><span class="st">  </span><span class="kw">check_rule</span>(<span class="kw">and</span>(<span class="st">&quot;CRP&quot;</span>,<span class="st">&quot;LacticAcid&quot;</span>), <span class="dt">label =</span> <span class="st">&quot;r2&quot;</span>) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb2-21" title="21"><span class="st">  </span><span class="kw">group_by</span>(r1, r2) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb2-22" title="22"><span class="st">  </span><span class="kw">n_cases</span>() </a>
-<a class="sourceLine" id="cb2-23" title="23"><span class="co">#&gt; # A tibble: 4 x 3</span></a>
-<a class="sourceLine" id="cb2-24" title="24"><span class="co">#&gt; # Groups:   r1 [2]</span></a>
-<a class="sourceLine" id="cb2-25" title="25"><span class="co">#&gt;   r1    r2    n_cases</span></a>
-<a class="sourceLine" id="cb2-26" title="26"><span class="co">#&gt;   &lt;lgl&gt; &lt;lgl&gt;   &lt;int&gt;</span></a>
-<a class="sourceLine" id="cb2-27" title="27"><span class="co">#&gt; 1 FALSE FALSE      10</span></a>
-<a class="sourceLine" id="cb2-28" title="28"><span class="co">#&gt; 2 FALSE TRUE       45</span></a>
-<a class="sourceLine" id="cb2-29" title="29"><span class="co">#&gt; 3 TRUE  FALSE     137</span></a>
-<a class="sourceLine" id="cb2-30" title="30"><span class="co">#&gt; 4 TRUE  TRUE      858</span></a></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(bupaR)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Attaching package: &#39;bupaR&#39;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; The following object is masked from &#39;package:stats&#39;:</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     filter</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; The following object is masked from &#39;package:utils&#39;:</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     timestamp</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(processcheckR)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Attaching package: &#39;processcheckR&#39;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; The following object is masked from &#39;package:base&#39;:</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     xor</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>sepsis <span class="sc">%&gt;%</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  <span class="co"># check if cases starts with &quot;ER Registration&quot;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">check_rule</span>(<span class="fu">starts</span>(<span class="st">&quot;ER Registration&quot;</span>), <span class="at">label =</span> <span class="st">&quot;r1&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  <span class="co"># check if activities &quot;CRP&quot; and &quot;LacticAcid&quot; occur together</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">check_rule</span>(<span class="fu">and</span>(<span class="st">&quot;CRP&quot;</span>,<span class="st">&quot;LacticAcid&quot;</span>), <span class="at">label =</span> <span class="st">&quot;r2&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(r1, r2) <span class="sc">%&gt;%</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">n_cases</span>() </span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tibble: 4 × 3</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   r1    r2    n_cases</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;lgl&gt; &lt;lgl&gt;   &lt;int&gt;</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 FALSE FALSE      10</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 FALSE TRUE       45</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 TRUE  FALSE     137</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 TRUE  TRUE      858</span></span></code></pre></div>
 </div>
 
 
